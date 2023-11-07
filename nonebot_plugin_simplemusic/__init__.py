@@ -66,7 +66,10 @@ def create_matchers():
 
 create_matchers()
 
+cmd = on_command("点歌", block=True, priority=12)
 
+
+@cmd.handle()
 async def handler(matcher: Matcher, msg: Message = CommandArg()):
     keyword = msg.extract_plain_text().strip()
     if not keyword:
@@ -77,12 +80,10 @@ async def handler(matcher: Matcher, msg: Message = CommandArg()):
     for source in sources:
         try:
             res = await source.func(keyword)
-        except:
+        except Exception:
             pass
         if res:
             await matcher.finish(res)
     if not res:
         await matcher.finish("找不到相关的歌曲")
 
-
-on_command("点歌", block=True, priority=12).append_handler(handler)

@@ -1,9 +1,10 @@
 from dataclasses import dataclass
 from difflib import SequenceMatcher
 from typing import Any, Dict, List, Optional, Protocol, Tuple
-
+import aiohttp
 import httpx
 from nonebot.adapters.onebot.v11 import MessageSegment
+from .model import RootDict
 
 
 async def search_qq(keyword: str) -> Optional[MessageSegment]:
@@ -218,8 +219,29 @@ class Source:
     func: Func
 
 
+async def search_azi(keyword: str) -> Optional[MessageSegment]:
+    users = [148524702]
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'
+    }
+    for mid in users:
+        async with aiohttp.ClientSession() as session:
+            async with session.get(
+                    f'https://api.bilibili.com/x/space/wbi/arc/search?keyword={keyword}&pn=1&ps=30&mid={mid}',
+                    headers=headers) as response:
+                result: RootDict = await response.json()
+                vlist = result['data']['list']['vlist']
+                if not vlist:
+                    continue
+                # 获得vlist里play最多的视频
+                vlist.sort(key=lambda x: x['play'], reverse=True)
+                video = vlist[0]
+                return MessageSegment.text(f"{video['title']}\nhttps://www.bilibili.com/video/{video['bvid']}")
+
+
 sources = [
     Source("QQ音乐", ("qq点歌", "QQ点歌"), search_qq),
+    Source("电梓播放器", ("阿梓点歌", "azi点歌"), search_azi),
     Source("网易云音乐", ("163点歌", "网易点歌", "网易云点歌"), search_163),
     Source("酷我音乐", ("kuwo点歌", "酷我点歌"), search_kuwo),
     Source("酷狗音乐", ("kugou点歌", "酷狗点歌"), search_kugou),
